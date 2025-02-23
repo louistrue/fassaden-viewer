@@ -607,7 +607,10 @@ function Header() {
           }}
         >
           <span>Telefon</span>
-          <a href="mailto:info@saegerei" style={{ color: '#666', textDecoration: 'none' }}>
+          <a
+            href="mailto:info@saegerei"
+            style={{ color: "#666", textDecoration: "none" }}
+          >
             info@saegerei
           </a>
         </div>
