@@ -606,12 +606,9 @@ function Header() {
             color: "#666",
           }}
         >
-          <span>Telefon +41 62 738 38 00</span>
-          <a
-            href="mailto:info@ruedersaege.ch"
-            style={{ color: "#00a67c", textDecoration: "none" }}
-          >
-            info@ruedersaege.ch
+          <span>Telefon</span>
+          <a href="mailto:info@saegerei" style={{ color: '#666', textDecoration: 'none' }}>
+            info@saegerei
           </a>
         </div>
       </div>
