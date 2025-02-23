@@ -1,50 +1,70 @@
-# React + TypeScript + Vite
+# 🏠 Fassaden Viewer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Ein interaktiver 3D-Viewer für Holzfassaden, entwickelt mit React, Three.js und Vite.
 
-Currently, two official plugins are available:
+## 🎥 Demo
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![Fassaden Viewer Demo](public/demo.gif)
 
-## Expanding the ESLint configuration
+## ✨ Features
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- 🎨 Realistische 3D-Darstellung von Holzfassaden
+- 🌳 Verschiedene Holzarten und Oberflächenbehandlungen
+- ⚡ Echtzeit-Vorschau von Alterungseffekten
+- 📸 Benutzerdefinierte Hintergrundbilder
+- 🎮 Intuitive Steuerung und Benutzeroberfläche
 
-- Configure the top-level `parserOptions` property like this:
+## 🚀 Erste Schritte
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### Voraussetzungen
+
+- Node.js (Version 18 oder höher)
+- npm oder pnpm
+
+### Installation
+
+```bash
+# Repository klonen
+git clone https://github.com/ihr-username/fassaden-viewer.git
+
+# In das Projektverzeichnis wechseln
+cd fassaden-viewer
+
+# Abhängigkeiten installieren
+npm install
+# oder
+pnpm install
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+### Entwicklung
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```bash
+# Entwicklungsserver starten
+npm run dev
+# oder
+pnpm dev
 ```
+
+### Build
+
+```bash
+# Produktions-Build erstellen
+npm run build
+# oder
+pnpm build
+```
+
+## 🛠️ Technologie-Stack
+
+- [React](https://reactjs.org/) - UI Framework
+- [Three.js](https://threejs.org/) - 3D-Rendering
+- [React Three Fiber](https://docs.pmnd.rs/react-three-fiber) - React-Renderer für Three.js
+- [Vite](https://vitejs.dev/) - Build-Tool und Entwicklungsserver
+- [TypeScript](https://www.typescriptlang.org/) - Typsicherheit
+- [Leva](https://github.com/pmndrs/leva) - GUI Controls
+
+## 📄 Lizenz
+
+[AGPL-3.0](LICENSE) - Siehe [LICENSE](LICENSE) für Details.
+
+Dieses Projekt steht unter der GNU Affero General Public License v3.0. Diese Lizenz erfordert, dass Sie den vollständigen Quellcode für alle Modifikationen offenlegen, auch wenn die Software nur als Netzwerkdienst bereitgestellt wird.
