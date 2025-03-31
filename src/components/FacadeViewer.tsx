@@ -4,6 +4,9 @@ import {
   Stage,
   useTexture,
   Environment,
+  Center,
+  Bounds,
+  Html,
 } from "@react-three/drei";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useControls, folder, button, Leva } from "leva";
@@ -15,6 +18,13 @@ import {
   SphereGeometry,
   Box3,
   Vector3,
+  Plane,
+  Matrix4,
+  Mesh,
+  Vector2,
+  BufferGeometry,
+  Line,
+  LineBasicMaterial,
 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -219,10 +229,10 @@ function createMaterial(
 
 function loadAvailableModels() {
   return [
-    "/facades/t_j.glb",
-    "/facades/t_j_t.glb",
-    "/facades/FVG102_j_t.glb",
-    "/facades/FVG102_j.glb",
+    "/facades/FVG.092.glb",
+    "/facades/FVG.073.glb",
+    "/facades/FHG.015.glb",
+    "/facades/FVG113.glb",
   ];
 }
 
@@ -260,23 +270,7 @@ function FileSelector({
   onBackgroundSelect: (file: string) => void;
   availableModels: string[];
 }) {
-  const [glbFiles, setGlbFiles] = useState<string[]>([]);
   const [bgImage, setBgImage] = useState<string>("");
-
-  useEffect(() => {
-    setGlbFiles(availableModels);
-    onGlbSelect(availableModels);
-  }, [availableModels, onGlbSelect]);
-
-  const handleGlbFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      const glbUrls = files.map((file) => URL.createObjectURL(file));
-      const newFiles = [...availableModels, ...glbUrls];
-      setGlbFiles(newFiles);
-      onGlbSelect(newFiles);
-    }
-  };
 
   const handleBackgroundImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
@@ -301,41 +295,6 @@ function FileSelector({
         maxWidth: "320px",
       }}
     >
-      <div style={{ marginBottom: "24px" }}>
-        <h3 style={{ margin: "0 0 16px 0", color: "#333", fontSize: "18px" }}>
-          Fassaden
-        </h3>
-        <div style={{ fontSize: "14px", marginBottom: "16px", color: "#666" }}>
-          <strong style={{ color: "#333" }}>Verfügbare Profile:</strong>
-          <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>
-            {availableModels.map((file, index) => (
-              <li key={index} style={{ marginBottom: "4px" }}>
-                {file.split("/").pop()}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <label
-          style={{
-            display: "inline-block",
-            padding: "8px 16px",
-            background: "#00a67c",
-            color: "white",
-            borderRadius: "4px",
-            cursor: "pointer",
-            marginTop: "8px",
-          }}
-        >
-          Profil hinzufügen
-          <input
-            type="file"
-            accept=".glb"
-            multiple
-            onChange={handleGlbFiles}
-            style={{ display: "none" }}
-          />
-        </label>
-      </div>
       <div>
         <h3 style={{ margin: "0 0 16px 0", color: "#333", fontSize: "18px" }}>
           Hintergrund
@@ -411,119 +370,13 @@ function CustomModel({
       box.getSize(size);
       box.getCenter(center);
 
-      // Adjust position to sit on the "ground"
-      gltf.scene.position.y = -center.y + size.y / 2;
+      // Adjust position to center the model
+      gltf.scene.position.y = -center.y;
     }
   }, [gltf?.scene]);
 
   if (!gltf?.scene) return null;
   return <primitive object={gltf.scene} />;
-}
-
-function FacadeModel({
-  woodType,
-  surface,
-  age,
-  modelPath,
-  treatment,
-  finishColor,
-  hasBackground,
-}: FacadeModelProps & { hasBackground?: boolean }) {
-  const materialRef = useRef<MeshStandardMaterial | null>(null);
-  const updateCountRef = useRef(0);
-
-  // Create geometries once
-  const geometries = useMemo(
-    () => ({
-      main: new BoxGeometry(2, 3, 0.1),
-      plank: new BoxGeometry(2, 0.45, 0.02),
-    }),
-    []
-  );
-
-  // Create initial material
-  const material = useMemo(() => {
-    console.log("Creating initial material");
-    const mat = createMaterial(woodType, surface, age, treatment, finishColor);
-    materialRef.current = mat;
-    return mat;
-  }, [woodType, surface, age, treatment, finishColor]);
-
-  // Update material when props change
-  useEffect(() => {
-    updateCountRef.current += 1;
-    console.log(`Material update #${updateCountRef.current}`, {
-      woodType,
-      surface,
-      age,
-      treatment,
-      finishColor,
-    });
-
-    if (materialRef.current) {
-      const newMaterial = createMaterial(
-        woodType,
-        surface,
-        age,
-        treatment,
-        finishColor
-      );
-      console.log("Copying new material properties to existing material");
-      materialRef.current.copy(newMaterial);
-      newMaterial.dispose();
-    }
-  }, [woodType, surface, age, treatment, finishColor]);
-
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      console.log("Cleaning up materials and geometries");
-      material.dispose();
-      geometries.main.dispose();
-      geometries.plank.dispose();
-    };
-  }, [material, geometries]);
-
-  // Force render on material updates
-  useFrame(() => {
-    if (materialRef.current) {
-      materialRef.current.needsUpdate = true;
-    }
-  });
-
-  if (modelPath) {
-    return (
-      <CustomModel
-        modelPath={modelPath}
-        woodType={woodType}
-        surface={surface}
-        age={age}
-        treatment={treatment}
-        finishColor={finishColor}
-      />
-    );
-  }
-
-  return (
-    <group>
-      {/* Only render the main background plane if no background image is active */}
-      {!hasBackground && (
-        <mesh
-          geometry={geometries.main}
-          material={material}
-          position={[0, 0, 0]}
-        />
-      )}
-      {Array.from({ length: 6 }).map((_, i) => (
-        <mesh
-          key={i}
-          geometry={geometries.plank}
-          material={material}
-          position={[0, -1.5 + i * 0.5, 0.05]}
-        />
-      ))}
-    </group>
-  );
 }
 
 function Header() {
@@ -535,7 +388,7 @@ function Header() {
         left: 0,
         right: 0,
         height: "80px",
-        backgroundColor: "#fff",
+        backgroundColor: "#ffffff",
         borderBottom: "1px solid #e5e5e5",
         zIndex: 1000,
         display: "flex",
@@ -545,9 +398,9 @@ function Header() {
       }}
     >
       <img
-        src="/rueder-logo.webp"
-        alt="Rueder Logo"
-        style={{ height: "50px", marginRight: "48px" }}
+        src="/Sagerei.png"
+        alt="Sagerei Logo"
+        style={{ height: "70px", marginRight: "48px" }}
       />
       <nav
         style={{
@@ -558,18 +411,18 @@ function Header() {
         }}
       >
         <a href="#" style={{ color: "#333", textDecoration: "none" }}>
-          Home
-        </a>
-        <a href="#" style={{ color: "#333", textDecoration: "none" }}>
-          Einsatzbereiche
+          Startseite
         </a>
         <a href="#" style={{ color: "#333", textDecoration: "none" }}>
           Produkte
         </a>
+        <a href="#" style={{ color: "#333", textDecoration: "none" }}>
+          Dienstleistungen
+        </a>
         <a
           href="#"
           style={{
-            color: "#00a67c",
+            color: "#2563eb",
             textDecoration: "none",
             fontWeight: "500",
           }}
@@ -577,13 +430,7 @@ function Header() {
           Fassaden Viewer
         </a>
         <a href="#" style={{ color: "#333", textDecoration: "none" }}>
-          Einkauf
-        </a>
-        <a href="#" style={{ color: "#333", textDecoration: "none" }}>
           Über uns
-        </a>
-        <a href="#" style={{ color: "#333", textDecoration: "none" }}>
-          Offene Stellen
         </a>
         <a href="#" style={{ color: "#333", textDecoration: "none" }}>
           Kontakt
@@ -619,16 +466,458 @@ function Header() {
   );
 }
 
+function SectionOutlinePanel({
+  visible,
+  points,
+}: {
+  visible: boolean;
+  points: Vector2[];
+}) {
+  if (!visible || points.length === 0) return null;
+
+  // Calculate bounding box of points
+  let minX = Infinity,
+    maxX = -Infinity;
+  let minY = Infinity,
+    maxY = -Infinity;
+  points.forEach((p) => {
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y);
+    maxY = Math.max(maxY, p.y);
+  });
+
+  // Calculate scale to fit in panel
+  const width = 200;
+  const height = 300;
+  const padding = 20;
+  const scaleX = (width - padding * 2) / (maxX - minX);
+  const scaleY = (height - padding * 2) / (maxY - minY);
+  const scale = Math.min(scaleX, scaleY);
+
+  // Transform points to panel coordinates
+  const transformedPoints = points.map((p) => ({
+    x: (p.x - minX) * scale + padding,
+    y: height - ((p.y - minY) * scale + padding),
+  }));
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        right: "16px",
+        bottom: "32px",
+        width: `${width}px`,
+        height: `${height}px`,
+        background: "white",
+        borderRadius: "8px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        padding: "16px",
+        display: visible ? "block" : "none",
+      }}
+    >
+      <div style={{ fontSize: "14px", marginBottom: "8px", fontWeight: 500 }}>
+        Schnittansicht
+      </div>
+      <svg width={width} height={height - 24} style={{ display: "block" }}>
+        <path
+          d={`M ${transformedPoints
+            .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+            .join(" ")} Z`}
+          fill="none"
+          stroke="#2563eb"
+          strokeWidth="2"
+        />
+      </svg>
+    </div>
+  );
+}
+
+function SceneController({
+  controls,
+  onSectionUpdate,
+}: {
+  controls: any;
+  onSectionUpdate: (points: Vector2[], enabled: boolean) => void;
+}) {
+  const { scene, camera } = useThree();
+  const [clippingEnabled, setClippingEnabled] = useState(false);
+  const [sectionMaterial] = useState(
+    () =>
+      new MeshStandardMaterial({
+        color: new Color(0.2, 0.2, 0.2),
+        side: 2,
+        clippingPlanes: [],
+        roughness: 0.4,
+        metalness: 0.5,
+      })
+  );
+
+  const handleReset = () => {
+    if (camera) {
+      camera.position.set(0, 0, 5);
+      camera.lookAt(0, 0, 0);
+    }
+
+    if (clippingEnabled) {
+      setClippingEnabled(false);
+      onSectionUpdate([], false);
+      if (scene) {
+        scene.traverse((child: any) => {
+          if (child.isMesh) {
+            child.material.clippingPlanes = [];
+            child.material.clipShadows = false;
+            child.material.needsUpdate = true;
+          }
+        });
+
+        const existingSection = scene.getObjectByName("sectionOutline");
+        if (existingSection) {
+          scene.remove(existingSection);
+        }
+      }
+    }
+  };
+
+  const handleZoom = () => {
+    if (camera && scene) {
+      console.log("Camera found:", camera);
+      console.log("Scene found:", scene);
+
+      // Find the main facade mesh by looking for the largest mesh in the scene
+      let facadeMesh = null;
+      let maxArea = 0;
+
+      console.log("Traversing scene...");
+      scene.traverse((child: any) => {
+        if (child.isMesh && child.geometry) {
+          console.log("Found mesh:", child.name, child.type);
+          const box = new Box3().setFromObject(child);
+          const size = new Vector3();
+          box.getSize(size);
+          const area = size.x * size.y;
+          console.log("Mesh dimensions:", {
+            name: child.name,
+            size: { x: size.x, y: size.y, z: size.z },
+            area: area,
+          });
+          if (area > maxArea) {
+            maxArea = area;
+            facadeMesh = child;
+          }
+        }
+      });
+
+      console.log(
+        "Selected facade mesh:",
+        facadeMesh?.name,
+        "with area:",
+        maxArea
+      );
+
+      if (facadeMesh) {
+        const box = new Box3().setFromObject(facadeMesh);
+        const size = new Vector3();
+        box.getSize(size);
+
+        // Calculate the distance needed to fit the facade
+        const maxDim = Math.max(size.x, size.y);
+        const fov = camera.fov * (Math.PI / 180);
+        const distance = Math.abs(maxDim / Math.sin(fov / 2));
+
+        console.log("Camera calculations:", {
+          maxDim,
+          fov,
+          distance,
+          finalDistance: distance * 0.6,
+        });
+
+        // Keep current camera direction but adjust distance
+        const direction = camera.position.clone().normalize();
+        camera.position.copy(direction.multiplyScalar(distance * 0.6));
+
+        console.log("Camera positioned at:", camera.position);
+      } else {
+        console.log("No facade mesh found, using default position");
+        // Keep current camera direction but reset distance
+        const direction = camera.position.clone().normalize();
+        camera.position.copy(direction.multiplyScalar(5));
+      }
+    }
+  };
+
+  const toggleClipping = () => {
+    console.log("Toggle clipping called, current state:", clippingEnabled);
+    const newClippingState = !clippingEnabled;
+    setClippingEnabled(newClippingState);
+
+    if (!newClippingState) {
+      onSectionUpdate([], false);
+    }
+
+    if (scene) {
+      console.log("Scene found, searching for facade mesh...");
+      let facadeMesh = null;
+      let maxArea = 0;
+
+      scene.traverse((child: any) => {
+        if (child.isMesh && child.geometry) {
+          const box = new Box3().setFromObject(child);
+          const size = new Vector3();
+          box.getSize(size);
+          const area = size.x * size.y;
+          console.log("Found mesh:", child.name, "with area:", area);
+          if (area > maxArea) {
+            maxArea = area;
+            facadeMesh = child;
+          }
+        }
+      });
+
+      if (facadeMesh) {
+        console.log("Found facade mesh, calculating clipping plane...");
+        const box = new Box3().setFromObject(facadeMesh);
+        const size = new Vector3();
+        const center = new Vector3();
+        box.getSize(size);
+        box.getCenter(center);
+
+        const bottomY = center.y - size.y / 2;
+        const clipHeight = bottomY + 0.5;
+        const clippingPlane = new Plane(new Vector3(0, -1, 0), clipHeight);
+
+        // Calculate section points for 2D view
+        if (newClippingState) {
+          const geometry = facadeMesh.geometry;
+          const position = geometry.attributes.position;
+          const points: Vector2[] = [];
+          const tempVec3 = new Vector3();
+
+          // Get all vertices at the clip height
+          for (let i = 0; i < position.count; i++) {
+            tempVec3.fromBufferAttribute(position, i);
+            tempVec3.applyMatrix4(facadeMesh.matrixWorld);
+            if (Math.abs(tempVec3.y - clipHeight) < 0.01) {
+              points.push(new Vector2(tempVec3.x, tempVec3.z));
+            }
+          }
+
+          // Sort points to form outline
+          if (points.length > 0) {
+            const sortedPoints = [points[0]];
+            points.splice(0, 1);
+
+            while (points.length > 0) {
+              const current = sortedPoints[sortedPoints.length - 1];
+              let nearestIdx = 0;
+              let nearestDist = Infinity;
+
+              points.forEach((p, i) => {
+                const dist = current.distanceTo(p);
+                if (dist < nearestDist) {
+                  nearestDist = dist;
+                  nearestIdx = i;
+                }
+              });
+
+              sortedPoints.push(points[nearestIdx]);
+              points.splice(nearestIdx, 1);
+            }
+
+            onSectionUpdate(sortedPoints, true);
+          }
+        }
+
+        // Remove existing section mesh if any
+        const existingSection = scene.getObjectByName("sectionOutline");
+        if (existingSection) {
+          console.log("Removing existing section outline");
+          scene.remove(existingSection);
+        }
+
+        if (newClippingState) {
+          console.log("Creating new section outline");
+          // Create section geometry from the facade mesh
+          const sectionGeometry = facadeMesh.geometry.clone();
+          sectionGeometry.translate(0, -clipHeight, 0);
+          const sectionMesh = new Mesh(sectionGeometry, sectionMaterial);
+          sectionMesh.name = "sectionOutline";
+          sectionMesh.position.y = clipHeight;
+          scene.add(sectionMesh);
+        }
+
+        // Apply to all materials in the scene
+        scene.traverse((child: any) => {
+          if (child.isMesh) {
+            console.log("Applying clipping to mesh:", child.name);
+            if (newClippingState) {
+              child.material.clippingPlanes = [clippingPlane];
+              child.material.clipShadows = true;
+              child.material.needsUpdate = true;
+            } else {
+              child.material.clippingPlanes = [];
+              child.material.clipShadows = false;
+              child.material.needsUpdate = true;
+            }
+          }
+        });
+      } else {
+        console.log("No facade mesh found");
+      }
+    } else {
+      console.log("No scene found");
+    }
+  };
+
+  // Expose functions to the parent through the controls ref
+  if (controls?.current) {
+    controls.current.zoomToFit = handleZoom;
+    controls.current.toggleClipping = toggleClipping;
+    controls.current.reset = handleReset;
+  }
+
+  return null;
+}
+
+function Toolbar({ controls }: { controls: any }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        bottom: "32px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 1000,
+        background: "white",
+        padding: "16px",
+        borderRadius: "8px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+        display: "flex",
+        gap: "12px",
+      }}
+    >
+      <button
+        onClick={() => controls?.current?.reset(true)}
+        style={{
+          padding: "8px 16px",
+          background: "#2563eb",
+          color: "white",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer",
+          fontSize: "14px",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          transition: "background-color 0.2s",
+        }}
+        onMouseOver={(e) => (e.currentTarget.style.background = "#1d4ed8")}
+        onMouseOut={(e) => (e.currentTarget.style.background = "#2563eb")}
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+        </svg>
+        Zurücksetzen
+      </button>
+      <button
+        onClick={() => controls?.current?.zoomToFit()}
+        style={{
+          padding: "8px 16px",
+          background: "#2563eb",
+          color: "white",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer",
+          fontSize: "14px",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          transition: "background-color 0.2s",
+        }}
+        onMouseOver={(e) => (e.currentTarget.style.background = "#1d4ed8")}
+        onMouseOut={(e) => (e.currentTarget.style.background = "#2563eb")}
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.92 1 6.74 2.74L21 8" />
+          <path d="M21 3v5h-5" />
+          <path d="M12 8v8" />
+          <path d="M8 12h8" />
+        </svg>
+        Zoom
+      </button>
+      <button
+        onClick={() => controls?.current?.toggleClipping()}
+        style={{
+          padding: "8px 16px",
+          background: "#2563eb",
+          color: "white",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer",
+          fontSize: "14px",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          transition: "background-color 0.2s",
+        }}
+        onMouseOver={(e) => (e.currentTarget.style.background = "#1d4ed8")}
+        onMouseOut={(e) => (e.currentTarget.style.background = "#2563eb")}
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 6H3" />
+          <path d="M3 12h18" />
+          <path d="M21 18H3" />
+        </svg>
+        Schnitt
+      </button>
+    </div>
+  );
+}
+
 export function FacadeViewer() {
   const availableModels = useMemo(() => loadAvailableModels(), []);
   const [glbFiles, setGlbFiles] = useState<string[]>(availableModels);
-  const [selectedModel, setSelectedModel] = useState<string>();
+  const [selectedModel, setSelectedModel] = useState<string>(
+    availableModels[0]
+  ); // Set first model as default
   const [backgroundImage, setBackgroundImage] = useState<string>();
   const [selectedTreatment, setSelectedTreatment] =
     useState<string>("Unbehandelt");
   const [selectedFinishColor, setSelectedFinishColor] = useState<
     string | undefined
   >();
+  const controlsRef = useRef<any>(null);
+  const [sectionPoints, setSectionPoints] = useState<Vector2[]>([]);
+  const [clippingEnabled, setClippingEnabled] = useState(false);
 
   const woodControls = useControls("Holz", {
     Holzart: {
@@ -742,6 +1031,19 @@ export function FacadeViewer() {
         max: 2,
         step: 0.1,
       },
+      "Bild auswählen": button(() => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.onchange = (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          if (file) {
+            const url = URL.createObjectURL(file);
+            setBackgroundImage(url);
+          }
+        };
+        input.click();
+      }),
       Zurücksetzen: button(() => {
         setBackgroundImage(undefined);
       }),
@@ -751,12 +1053,17 @@ export function FacadeViewer() {
 
   useEffect(() => {
     if (modelControls.Auswahl === "Standard") {
-      setSelectedModel(undefined);
+      setSelectedModel(availableModels[0]);
     } else {
       const fullPath = glbFiles.find((f) => f.endsWith(modelControls.Auswahl));
-      setSelectedModel(fullPath);
+      setSelectedModel(fullPath || availableModels[0]);
     }
-  }, [modelControls.Auswahl, glbFiles]);
+  }, [modelControls.Auswahl, glbFiles, availableModels]);
+
+  const handleSectionUpdate = (points: Vector2[], enabled: boolean) => {
+    setSectionPoints(points);
+    setClippingEnabled(enabled);
+  };
 
   return (
     <div
@@ -771,11 +1078,6 @@ export function FacadeViewer() {
     >
       <Header />
       <div style={{ paddingTop: "80px", height: "100%" }}>
-        <FileSelector
-          availableModels={availableModels}
-          onGlbSelect={setGlbFiles}
-          onBackgroundSelect={setBackgroundImage}
-        />
         <Canvas
           dpr={[1, 2]}
           gl={{
@@ -783,6 +1085,7 @@ export function FacadeViewer() {
             alpha: false,
             preserveDrawingBuffer: true,
             powerPreference: "high-performance",
+            localClippingEnabled: true, // Enable clipping
           }}
           camera={{
             position: [0, 0, 5],
@@ -815,40 +1118,40 @@ export function FacadeViewer() {
                 resolution: 1024,
               }}
             >
-              {selectedModel ? (
-                <CustomModel
-                  modelPath={selectedModel}
-                  woodType={woodControls.Holzart}
-                  surface={woodControls.Oberfläche}
-                  age={ageControls["Alter (Jahre)"]}
-                  treatment={selectedTreatment}
-                  finishColor={selectedFinishColor}
-                />
-              ) : (
-                <FacadeModel
-                  woodType={woodControls.Holzart}
-                  surface={woodControls.Oberfläche}
-                  age={ageControls["Alter (Jahre)"]}
-                  treatment={selectedTreatment}
-                  finishColor={selectedFinishColor}
-                  hasBackground={!!backgroundImage}
-                />
-              )}
+              <CustomModel
+                modelPath={selectedModel}
+                woodType={woodControls.Holzart}
+                surface={woodControls.Oberfläche}
+                age={ageControls["Alter (Jahre)"]}
+                treatment={selectedTreatment}
+                finishColor={selectedFinishColor}
+              />
             </Stage>
             <OrbitControls
+              ref={controlsRef}
               makeDefault
               minPolarAngle={0}
               maxPolarAngle={Math.PI / 2}
               enableDamping
               dampingFactor={0.05}
-              minDistance={2}
               maxDistance={10}
+              mouseButtons={{
+                LEFT: 0, // Left mouse for rotation
+                MIDDLE: 2, // Middle mouse for panning
+                RIGHT: 1, // Right mouse for zooming
+              }}
+            />
+            <SceneController
+              controls={controlsRef}
+              onSectionUpdate={handleSectionUpdate}
             />
           </Suspense>
         </Canvas>
-        <div style={{ position: "fixed", bottom: "16px", right: "16px" }}>
+        <div style={{ position: "fixed", top: "96px", right: "16px" }}>
           <Leva fill titleBar={{ title: "Einstellungen", filter: true }} />
         </div>
+        <Toolbar controls={controlsRef} />
+        <SectionOutlinePanel visible={clippingEnabled} points={sectionPoints} />
       </div>
     </div>
   );
